@@ -1,0 +1,21 @@
+{
+  "name": "odoo",
+  "version": "1.0.0",
+  "description": "A full-stack application built with React, Tailwind CSS, Express, and PostgreSQL, following mobile-first design principles with distinctive aesthetics.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ashitosh-Jadhav/odoo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ashitosh-Jadhav/odoo/issues"
+  },
+  "homepage": "https://github.com/Ashitosh-Jadhav/odoo#readme"
+}

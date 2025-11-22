@@ -11,9 +11,12 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
-      <div className={`relative w-full ${sizes[size]} rounded-2xl border border-white/10 bg-slate-900 shadow-xl`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+        onClick={onClose}
+      ></div>
+      <div className={`relative w-full ${sizes[size]} rounded-2xl border border-white/10 bg-slate-900 shadow-xl animate-slide-up`}>
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-50">{title}</h2>
           <button

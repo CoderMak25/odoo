@@ -19,14 +19,22 @@ export default function Select({
       <select
         value={value}
         onChange={onChange}
-        className={`w-full rounded-md border ${
-          error ? 'border-rose-500' : 'border-white/10'
-        } bg-white/5 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/30 ${className}`}
+        className={`w-full rounded-xl border-2 ${
+          error ? 'border-rose-500' : 'border-indigo-500/30'
+        } bg-gradient-to-br from-slate-800 to-slate-900 px-4 py-3 text-sm text-slate-100 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-lg hover:shadow-xl hover:border-indigo-500/50 ${className}`}
+        style={{
+          backgroundColor: '#1e293b',
+          borderRadius: '0.75rem',
+        }}
         {...props}
       >
-        <option value="">Select {label}</option>
+        <option value="" className="bg-slate-800 text-slate-200">Select {label}</option>
         {options.map((option) => (
-          <option key={option.value || option} value={option.value || option}>
+          <option 
+            key={option.value || option} 
+            value={option.value || option}
+            className="bg-slate-800 text-slate-200"
+          >
             {option.label || option}
           </option>
         ))}

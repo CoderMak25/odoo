@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import Stock from './pages/Stock';
+import Operations from './pages/Operations';
+import MoveHistory from './pages/MoveHistory';
+import Settings from './pages/Settings';
 import Receipts from './pages/Receipts';
 import Deliveries from './pages/Deliveries';
 import Toast from './components/ui/Toast';
@@ -62,6 +66,38 @@ function AppRoutes() {
               <Layout>
                 <Products />
               </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stock"
+          element={
+            <ProtectedRoute>
+              <Stock />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/operations"
+          element={
+            <ProtectedRoute>
+              <Operations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/move-history"
+          element={
+            <ProtectedRoute>
+              <MoveHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />

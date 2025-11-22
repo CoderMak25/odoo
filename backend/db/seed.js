@@ -75,14 +75,47 @@ export async function seedDatabase() {
       }
       console.log(`  ✅ Created ${products.length} products`);
       
-      // 4. Insert receipts
-      const receipts = [
-        { receiptId: 'RCP-001', supplier: 'Steel Corp Ltd', date: '2025-01-15', status: 'done', items: [{ productId: 0, quantity: 50 }] },
-        { receiptId: 'RCP-002', supplier: 'Furniture World', date: '2025-01-16', status: 'ready', items: [{ productId: 1, quantity: 20 }] },
-        { receiptId: 'RCP-003', supplier: 'Tech Supplies Inc', date: '2025-01-17', status: 'waiting', items: [{ productId: 2, quantity: 10 }] },
-        { receiptId: 'RCP-004', supplier: 'Raw Materials Co', date: '2025-01-18', status: 'draft', items: [{ productId: 3, quantity: 100 }] },
-        { receiptId: 'RCP-005', supplier: 'Chemical Solutions', date: '2025-01-19', status: 'canceled', items: [{ productId: 4, quantity: 15 }] },
+      // Helper function to get date string for N days ago
+      const getDateString = (daysAgo) => {
+        const date = new Date();
+        date.setDate(date.getDate() - daysAgo);
+        return date.toISOString().split('T')[0];
+      };
+
+      // 4. Insert receipts - spread across last 90 days with more data
+      const receipts = [];
+      const suppliers = [
+        'Steel Corp Ltd', 'Furniture World', 'Tech Supplies Inc', 'Raw Materials Co',
+        'Chemical Solutions', 'Hardware Plus', 'Electronics Direct', 'Office Supplies Co',
+        'Industrial Materials', 'Tech Solutions', 'Wood Suppliers', 'Paint & Chemicals',
+        'Hardware Depot', 'Lighting Solutions', 'Furniture Plus', 'Office Furniture Co'
       ];
+      const statuses = ['done', 'done', 'done', 'ready', 'waiting', 'draft']; // More done than others
+      
+      let receiptCounter = 1;
+      // Generate receipts for last 90 days
+      for (let daysAgo = 0; daysAgo < 90; daysAgo++) {
+        // More receipts on recent days, fewer on older days
+        const baseCount = daysAgo < 7 ? 3 : daysAgo < 30 ? 2 : daysAgo < 60 ? 1 : 0;
+        const randomCount = Math.floor(Math.random() * 2); // 0-1 additional
+        const count = baseCount + randomCount;
+        
+        for (let i = 0; i < count; i++) {
+          const receiptId = `RCP-${String(receiptCounter++).padStart(3, '0')}`;
+          const supplier = suppliers[Math.floor(Math.random() * suppliers.length)];
+          const status = statuses[Math.floor(Math.random() * statuses.length)];
+          const productIndex = Math.floor(Math.random() * productIds.length);
+          const quantity = Math.floor(Math.random() * 100) + 10;
+          
+          receipts.push({
+            receiptId,
+            supplier,
+            date: getDateString(daysAgo),
+            status,
+            items: [{ productId: productIndex, quantity }]
+          });
+        }
+      }
       
       for (const receipt of receipts) {
         const receiptResult = await client.query(
@@ -99,27 +132,55 @@ export async function seedDatabase() {
         
         // Insert receipt items
         for (const item of receipt.items) {
-          const productIndex = item.productId;
-          if (productIds[productIndex]) {
+          const productId = typeof item.productId === 'number' 
+            ? productIds[item.productId] 
+            : item.productId;
+          if (productId) {
             await client.query(
               `INSERT INTO receipt_items (receipt_id, product_id, quantity)
                VALUES ($1, $2, $3)
                ON CONFLICT DO NOTHING`,
-              [receiptDbId, productIds[productIndex], item.quantity]
+              [receiptDbId, productId, item.quantity]
             );
           }
         }
       }
       console.log(`  ✅ Created ${receipts.length} receipts`);
       
-      // 5. Insert deliveries
-      const deliveries = [
-        { deliveryId: 'DEL-001', customer: 'ABC Manufacturing', date: '2025-01-15', status: 'done', items: [{ productId: 0, quantity: 20 }] },
-        { deliveryId: 'DEL-002', customer: 'XYZ Retail', date: '2025-01-16', status: 'ready', items: [{ productId: 1, quantity: 10 }] },
-        { deliveryId: 'DEL-003', customer: 'Tech Store', date: '2025-01-17', status: 'waiting', items: [{ productId: 2, quantity: 5 }] },
-        { deliveryId: 'DEL-004', customer: 'Construction Co', date: '2025-01-18', status: 'draft', items: [{ productId: 3, quantity: 50 }] },
-        { deliveryId: 'DEL-005', customer: 'Home Depot', date: '2025-01-19', status: 'done', items: [{ productId: 6, quantity: 30 }] },
+      // 5. Insert deliveries - spread across last 90 days with more data
+      const deliveries = [];
+      const customers = [
+        'ABC Manufacturing', 'XYZ Retail', 'Tech Store', 'Construction Co', 'Home Depot',
+        'Retail Chain', 'Electronics Shop', 'Hardware Store', 'Manufacturing Inc', 'Furniture Outlet',
+        'Tech Solutions', 'Building Supplies', 'Paint Store', 'Hardware Plus', 'Lighting Store',
+        'Office Supplies', 'Industrial Supply', 'Furniture Warehouse', 'Big Box Store', 'Online Seller'
       ];
+      const deliveryStatuses = ['done', 'done', 'done', 'ready', 'waiting', 'draft'];
+      
+      let deliveryCounter = 1;
+      // Generate deliveries for last 90 days
+      for (let daysAgo = 0; daysAgo < 90; daysAgo++) {
+        // More deliveries on recent days, fewer on older days
+        const baseCount = daysAgo < 7 ? 3 : daysAgo < 30 ? 2 : daysAgo < 60 ? 1 : 0;
+        const randomCount = Math.floor(Math.random() * 2); // 0-1 additional
+        const count = baseCount + randomCount;
+        
+        for (let i = 0; i < count; i++) {
+          const deliveryId = `DEL-${String(deliveryCounter++).padStart(3, '0')}`;
+          const customer = customers[Math.floor(Math.random() * customers.length)];
+          const status = deliveryStatuses[Math.floor(Math.random() * deliveryStatuses.length)];
+          const productIndex = Math.floor(Math.random() * productIds.length);
+          const quantity = Math.floor(Math.random() * 50) + 5;
+          
+          deliveries.push({
+            deliveryId,
+            customer,
+            date: getDateString(daysAgo),
+            status,
+            items: [{ productId: productIndex, quantity }]
+          });
+        }
+      }
       
       for (const delivery of deliveries) {
         const deliveryResult = await client.query(
@@ -136,13 +197,15 @@ export async function seedDatabase() {
         
         // Insert delivery items
         for (const item of delivery.items) {
-          const productIndex = item.productId;
-          if (productIds[productIndex]) {
+          const productId = typeof item.productId === 'number' 
+            ? productIds[item.productId] 
+            : item.productId;
+          if (productId) {
             await client.query(
               `INSERT INTO delivery_items (delivery_id, product_id, quantity)
                VALUES ($1, $2, $3)
                ON CONFLICT DO NOTHING`,
-              [deliveryDbId, productIds[productIndex], item.quantity]
+              [deliveryDbId, productId, item.quantity]
             );
           }
         }

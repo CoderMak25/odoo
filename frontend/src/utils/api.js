@@ -102,5 +102,72 @@ export const authAPI = {
   },
 };
 
-export default api;
+// Products API
+export async function fetchProducts() {
+  const response = await api.get('/products');
+  return response.data;
+}
 
+export async function createProduct(product) {
+  const response = await api.post('/products', product);
+  return response.data;
+}
+
+export async function updateProduct(id, product) {
+  const response = await api.put(`/products/${id}`, product);
+  return response.data;
+}
+
+export async function deleteProduct(id) {
+  const response = await api.delete(`/products/${id}`);
+  return response.data;
+}
+
+// Receipts API
+export async function fetchReceipts() {
+  const response = await api.get('/receipts');
+  return response.data;
+}
+
+export async function createReceipt(receipt) {
+  const response = await api.post('/receipts', receipt);
+  return response.data;
+}
+
+export async function updateReceipt(id, receipt) {
+  const response = await api.put(`/receipts/${id}`, receipt);
+  return response.data;
+}
+
+export async function validateReceipt(id) {
+  const response = await api.post(`/receipts/${id}/validate`);
+  return response.data;
+}
+
+export async function deleteReceipt(id) {
+  const response = await api.delete(`/receipts/${id}`);
+  return response.data;
+}
+
+// Deliveries API
+export async function fetchDeliveries() {
+  const response = await api.get('/deliveries');
+  return response.data;
+}
+
+export async function createDelivery(delivery) {
+  const response = await api.post('/deliveries', delivery);
+  return response.data;
+}
+
+export async function updateDelivery(id, delivery) {
+  const response = await api.put(`/deliveries/${id}`, delivery);
+  return response.data;
+}
+
+export async function deleteDelivery(id) {
+  const response = await api.delete(`/deliveries/${id}`);
+  return response.data;
+}
+
+export default api;
