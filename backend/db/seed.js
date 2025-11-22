@@ -13,6 +13,11 @@ export async function seedDatabase() {
     try {
       await client.query('BEGIN');
       
+      // 0. Clear existing deliveries to ensure fresh seed data
+      console.log('  Clearing existing deliveries...');
+      await client.query('DELETE FROM delivery_items');
+      await client.query('DELETE FROM deliveries');
+      
       // 1. Create a test user
       const hashedPassword = await bcrypt.hash('password123', 10);
       const userResult = await client.query(
@@ -147,7 +152,7 @@ export async function seedDatabase() {
       }
       console.log(`  ✅ Created ${receipts.length} receipts`);
       
-      // 5. Insert deliveries - spread across last 90 days with more data
+      // 5. Insert deliveries - spread across last 90 days with all statuses
       const deliveries = [];
       const customers = [
         'ABC Manufacturing', 'XYZ Retail', 'Tech Store', 'Construction Co', 'Home Depot',
@@ -155,22 +160,20 @@ export async function seedDatabase() {
         'Tech Solutions', 'Building Supplies', 'Paint Store', 'Hardware Plus', 'Lighting Store',
         'Office Supplies', 'Industrial Supply', 'Furniture Warehouse', 'Big Box Store', 'Online Seller'
       ];
-      const deliveryStatuses = ['done', 'done', 'done', 'ready', 'waiting', 'draft'];
       
+      // Ensure we have deliveries with all statuses - limited quantity
+      const deliveryStatusList = ['draft', 'waiting', 'ready', 'done'];
       let deliveryCounter = 1;
-      // Generate deliveries for last 90 days
-      for (let daysAgo = 0; daysAgo < 90; daysAgo++) {
-        // More deliveries on recent days, fewer on older days
-        const baseCount = daysAgo < 7 ? 3 : daysAgo < 30 ? 2 : daysAgo < 60 ? 1 : 0;
-        const randomCount = Math.floor(Math.random() * 2); // 0-1 additional
-        const count = baseCount + randomCount;
-        
+      
+      // Create 3-4 deliveries for each status (total ~12-16 deliveries)
+      deliveryStatusList.forEach((status, statusIndex) => {
+        const count = 3 + Math.floor(Math.random() * 2); // 3-4 per status
         for (let i = 0; i < count; i++) {
           const deliveryId = `DEL-${String(deliveryCounter++).padStart(3, '0')}`;
           const customer = customers[Math.floor(Math.random() * customers.length)];
-          const status = deliveryStatuses[Math.floor(Math.random() * deliveryStatuses.length)];
           const productIndex = Math.floor(Math.random() * productIds.length);
           const quantity = Math.floor(Math.random() * 50) + 5;
+          const daysAgo = statusIndex * 2 + i; // Spread across recent days
           
           deliveries.push({
             deliveryId,
@@ -180,32 +183,63 @@ export async function seedDatabase() {
             items: [{ productId: productIndex, quantity }]
           });
         }
-      }
+      });
+      
+      // Get default location
+      const locationResult = await client.query(
+        'SELECT id FROM locations WHERE warehouse_id = $1 LIMIT 1',
+        [warehouseId]
+      );
+      const locationId = locationResult.rows[0]?.id || null;
+      
+      const contacts = ['Jane Scherer', 'John Doe', 'Sarah Smith', 'Mike Johnson', 'Emily Davis'];
       
       for (const delivery of deliveries) {
+        // Extract number from DEL-001 format
+        const match = delivery.deliveryId.match(/DEL-(\d+)/);
+        const deliveryNumber = match ? parseInt(match[1]) : parseInt(delivery.deliveryId.replace('DEL-', '')) || 1;
+        const reference = `WH/OUT/${String(deliveryNumber).padStart(4, '0')}`;
+        const contact = contacts[Math.floor(Math.random() * contacts.length)];
+        
         const deliveryResult = await client.query(
-          `INSERT INTO deliveries (delivery_id, customer, date, status, warehouse_id, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO deliveries (
+            delivery_id, reference, customer, to_customer, contact, date, schedule_date,
+            status, warehouse_id, from_location_id, operation_type, created_by
+          )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            ON CONFLICT (delivery_id) DO UPDATE SET
              customer = EXCLUDED.customer,
+             to_customer = COALESCE(EXCLUDED.to_customer, EXCLUDED.customer),
              date = EXCLUDED.date,
-             status = EXCLUDED.status
+             schedule_date = COALESCE(EXCLUDED.schedule_date, EXCLUDED.date),
+             status = EXCLUDED.status,
+             reference = COALESCE(EXCLUDED.reference, deliveries.reference),
+             contact = COALESCE(EXCLUDED.contact, deliveries.contact),
+             from_location_id = COALESCE(EXCLUDED.from_location_id, deliveries.from_location_id)
            RETURNING id`,
-          [delivery.deliveryId, delivery.customer, delivery.date, delivery.status, warehouseId, userId]
+          [
+            delivery.deliveryId, reference, delivery.customer, delivery.customer,
+            contact, delivery.date, delivery.date, delivery.status,
+            warehouseId, locationId, 'Delivery Order', userId
+          ]
         );
         const deliveryDbId = deliveryResult.rows[0].id;
         
         // Insert delivery items
+        // For ready and done statuses, reserve stock; for draft and waiting, don't reserve yet
+        const shouldReserveStock = (delivery.status === 'ready' || delivery.status === 'done');
+        
         for (const item of delivery.items) {
           const productId = typeof item.productId === 'number' 
             ? productIds[item.productId] 
             : item.productId;
           if (productId) {
+            const reservedStock = shouldReserveStock ? item.quantity : 0;
             await client.query(
-              `INSERT INTO delivery_items (delivery_id, product_id, quantity)
-               VALUES ($1, $2, $3)
+              `INSERT INTO delivery_items (delivery_id, product_id, quantity, reserved_stock)
+               VALUES ($1, $2, $3, $4)
                ON CONFLICT DO NOTHING`,
-              [deliveryDbId, productId, item.quantity]
+              [deliveryDbId, productId, item.quantity, reservedStock]
             );
           }
         }

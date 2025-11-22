@@ -85,8 +85,23 @@ export async function deleteReceipt(id) {
 }
 
 // Deliveries API
-export async function fetchDeliveries() {
-  return apiCall('/deliveries');
+export async function fetchDeliveries(params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.status) queryParams.append('status', params.status);
+  if (params.from_date) queryParams.append('from_date', params.from_date);
+  if (params.to_date) queryParams.append('to_date', params.to_date);
+  if (params.search) queryParams.append('search', params.search);
+  if (params.page) queryParams.append('page', params.page);
+  if (params.limit) queryParams.append('limit', params.limit);
+  if (params.sort_by) queryParams.append('sort_by', params.sort_by);
+  if (params.sort_order) queryParams.append('sort_order', params.sort_order);
+  
+  const query = queryParams.toString();
+  return apiCall(`/deliveries${query ? `?${query}` : ''}`);
+}
+
+export async function fetchDeliveryById(id) {
+  return apiCall(`/deliveries/${id}`);
 }
 
 export async function createDelivery(delivery) {
@@ -107,4 +122,34 @@ export async function deleteDelivery(id) {
   return apiCall(`/deliveries/${id}`, {
     method: 'DELETE',
   });
+}
+
+export async function addDeliveryItem(deliveryId, item) {
+  return apiCall(`/deliveries/${deliveryId}/add-item`, {
+    method: 'POST',
+    body: JSON.stringify(item),
+  });
+}
+
+export async function removeDeliveryItem(deliveryId, itemId) {
+  return apiCall(`/deliveries/${deliveryId}/items/${itemId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function validateDelivery(id) {
+  return apiCall(`/deliveries/${id}/validate`, {
+    method: 'POST',
+  });
+}
+
+export async function processDelivery(id) {
+  return apiCall(`/deliveries/${id}/process`, {
+    method: 'POST',
+  });
+}
+
+export async function fetchAvailableStock(locationId) {
+  const query = locationId ? `?location_id=${locationId}` : '';
+  return apiCall(`/products/available-stock${query}`);
 }

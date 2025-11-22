@@ -40,12 +40,12 @@ export function AppProvider({ children }) {
         const [productsData, receiptsData, deliveriesData] = await Promise.all([
           api.fetchProducts().catch(() => []),
           api.fetchReceipts().catch(() => []),
-          api.fetchDeliveries().catch(() => []),
+          api.fetchDeliveries().catch(() => ({ deliveries: [], total: 0, page: 1 })),
         ]);
         
         setProducts(productsData);
         setReceipts(receiptsData);
-        setDeliveries(deliveriesData);
+        setDeliveries(Array.isArray(deliveriesData) ? deliveriesData : (deliveriesData.deliveries || []));
       } catch (error) {
         console.error('Error fetching data:', error);
         showToast('Failed to load data from server', 'error');
@@ -210,12 +210,8 @@ export function AppProvider({ children }) {
   // Delivery operations
   const addDelivery = async (delivery) => {
     try {
-      const newDelivery = await api.createDelivery({
-        customer: delivery.customer,
-        date: delivery.date,
-        status: delivery.status || 'draft',
-        items: delivery.items,
-      });
+      const result = await api.createDelivery(delivery);
+      const newDelivery = result.delivery || result;
       setDeliveries([...deliveries, newDelivery]);
       
       // Update product stock if delivery is done
@@ -224,25 +220,61 @@ export function AppProvider({ children }) {
       }
       
       showToast('Delivery order created successfully', 'success');
+      return newDelivery;
     } catch (error) {
       console.error('Error adding delivery:', error);
       showToast(error.message || 'Failed to create delivery', 'error');
+      throw error;
     }
   };
 
   const updateDelivery = async (id, updates) => {
     try {
-      const updated = await api.updateDelivery(id, {
-        customer: updates.customer,
-        date: updates.date,
-        status: updates.status,
-        items: updates.items,
-      });
+      const result = await api.updateDelivery(id, updates);
+      const updated = result.delivery || result;
       setDeliveries(deliveries.map(d => d.id === id ? updated : d));
       showToast('Delivery updated successfully', 'success');
+      return updated;
     } catch (error) {
       console.error('Error updating delivery:', error);
       showToast(error.message || 'Failed to update delivery', 'error');
+      throw error;
+    }
+  };
+
+  const validateDelivery = async (id) => {
+    try {
+      const result = await api.validateDelivery(id);
+      // Refresh deliveries to get updated status
+      const updatedDeliveries = await api.fetchDeliveries();
+      const deliveriesList = Array.isArray(updatedDeliveries) ? updatedDeliveries : (updatedDeliveries.deliveries || []);
+      setDeliveries(deliveriesList);
+      showToast('Delivery validated successfully', 'success');
+      return result;
+    } catch (error) {
+      console.error('Error validating delivery:', error);
+      showToast(error.message || 'Failed to validate delivery', 'error');
+      throw error;
+    }
+  };
+
+  const processDelivery = async (id) => {
+    try {
+      const result = await api.processDelivery(id);
+      // Refresh deliveries and products
+      const [updatedDeliveries, updatedProducts] = await Promise.all([
+        api.fetchDeliveries(),
+        api.fetchProducts()
+      ]);
+      const deliveriesList = Array.isArray(updatedDeliveries) ? updatedDeliveries : (updatedDeliveries.deliveries || []);
+      setDeliveries(deliveriesList);
+      setProducts(updatedProducts);
+      showToast('Delivery processed successfully', 'success');
+      return result;
+    } catch (error) {
+      console.error('Error processing delivery:', error);
+      showToast(error.message || 'Failed to process delivery', 'error');
+      throw error;
     }
   };
 
@@ -254,6 +286,7 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error('Error deleting delivery:', error);
       showToast(error.message || 'Failed to delete delivery', 'error');
+      throw error;
     }
   };
 
@@ -324,6 +357,8 @@ export function AppProvider({ children }) {
     deleteReceipt,
     addDelivery,
     updateDelivery,
+    validateDelivery,
+    processDelivery,
     deleteDelivery,
     login,
     logout,

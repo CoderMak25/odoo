@@ -103,7 +103,7 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/deliveries"
+          path="/deliveries/*"
           element={
             <ProtectedRoute>
               <Layout>

@@ -105,11 +105,19 @@ CREATE TABLE IF NOT EXISTS receipt_items (
 CREATE TABLE IF NOT EXISTS deliveries (
     id SERIAL PRIMARY KEY,
     delivery_id VARCHAR(50) UNIQUE NOT NULL,
+    reference VARCHAR(50), -- WH/OUT/XXXX format
     customer VARCHAR(255) NOT NULL,
+    to_customer VARCHAR(255), -- Customer/vendor name
+    contact VARCHAR(255), -- Contact person name
     date DATE NOT NULL,
+    schedule_date DATE, -- Scheduled delivery date
     status VARCHAR(50) DEFAULT 'draft', -- draft, waiting, ready, done, canceled
     warehouse_id INTEGER REFERENCES warehouses(id) ON DELETE SET NULL,
     location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    from_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    responsible VARCHAR(255), -- Responsible person
+    operation_type VARCHAR(100) DEFAULT 'Delivery Order', -- Delivery Order, Sales Return, etc.
+    delivery_address TEXT,
     notes TEXT,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -124,6 +132,9 @@ CREATE TABLE IF NOT EXISTS delivery_items (
     delivery_id INTEGER REFERENCES deliveries(id) ON DELETE CASCADE,
     product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
     quantity DECIMAL(15, 3) NOT NULL,
+    reserved_stock DECIMAL(15, 3) DEFAULT 0, -- Stock reserved for this delivery
+    picked BOOLEAN DEFAULT FALSE,
+    packed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -177,6 +188,25 @@ CREATE TABLE IF NOT EXISTS adjustments (
 );
 
 -- ============================================
+-- STOCK MOVES TABLE (Stock Movement Tracking)
+-- ============================================
+CREATE TABLE IF NOT EXISTS stock_moves (
+    id SERIAL PRIMARY KEY,
+    reference VARCHAR(50),
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+    from_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    to_location_id INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+    quantity DECIMAL(15, 3) NOT NULL,
+    operation_type VARCHAR(50) NOT NULL DEFAULT 'delivery',
+    related_document_id INTEGER, -- Reference to delivery, receipt, etc.
+    related_document_type VARCHAR(50), -- 'delivery', 'receipt', 'transfer'
+    status VARCHAR(50) DEFAULT 'pending', -- pending, done, canceled
+    date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================
 -- STOCK LEDGER TABLE (Audit Trail)
 -- ============================================
 CREATE TABLE IF NOT EXISTS stock_ledger (
@@ -213,8 +243,11 @@ CREATE INDEX IF NOT EXISTS idx_receipt_items_product_id ON receipt_items(product
 
 -- Deliveries indexes
 CREATE INDEX IF NOT EXISTS idx_deliveries_delivery_id ON deliveries(delivery_id);
+CREATE INDEX IF NOT EXISTS idx_deliveries_reference ON deliveries(reference);
 CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);
 CREATE INDEX IF NOT EXISTS idx_deliveries_date ON deliveries(date);
+CREATE INDEX IF NOT EXISTS idx_deliveries_schedule_date ON deliveries(schedule_date);
+CREATE INDEX IF NOT EXISTS idx_deliveries_contact ON deliveries(contact);
 CREATE INDEX IF NOT EXISTS idx_delivery_items_delivery_id ON delivery_items(delivery_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_items_product_id ON delivery_items(product_id);
 
@@ -223,6 +256,12 @@ CREATE INDEX IF NOT EXISTS idx_transfers_transfer_id ON transfers(transfer_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_status ON transfers(status);
 CREATE INDEX IF NOT EXISTS idx_transfer_items_transfer_id ON transfer_items(transfer_id);
 CREATE INDEX IF NOT EXISTS idx_transfer_items_product_id ON transfer_items(product_id);
+
+-- Stock moves indexes
+CREATE INDEX IF NOT EXISTS idx_stock_moves_reference ON stock_moves(reference);
+CREATE INDEX IF NOT EXISTS idx_stock_moves_product_id ON stock_moves(product_id);
+CREATE INDEX IF NOT EXISTS idx_stock_moves_related_document ON stock_moves(related_document_type, related_document_id);
+CREATE INDEX IF NOT EXISTS idx_stock_moves_status ON stock_moves(status);
 
 -- Stock ledger indexes
 CREATE INDEX IF NOT EXISTS idx_stock_ledger_product_id ON stock_ledger(product_id);
@@ -279,6 +318,9 @@ CREATE TRIGGER update_transfers_updated_at BEFORE UPDATE ON transfers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_adjustments_updated_at BEFORE UPDATE ON adjustments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_stock_moves_updated_at BEFORE UPDATE ON stock_moves
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to update product status based on stock and reorder level
