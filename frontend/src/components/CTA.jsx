@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Zap, Rocket, MessageSquare } from 'lucide-react';
 
 export default function CTA() {
@@ -22,20 +23,20 @@ export default function CTA() {
               Replace manual logs and spreadsheets with a single source of truth. Simple for warehouse teams, powerful for managers.
             </p>
             <div className="mt-5 flex flex-col sm:flex-row items-center gap-3">
-              <a
-                href="#"
+              <Link
+                to="/login"
                 className="inline-flex items-center gap-2 rounded-md bg-slate-100 text-slate-900 text-sm font-semibold px-4 py-2.5 hover:bg-white"
               >
                 <Rocket className="h-4 w-4" />
                 Create your account
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/login"
                 className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/10 text-sm font-medium text-slate-100 px-4 py-2.5 hover:bg-white/20"
               >
                 <MessageSquare className="h-4 w-4" />
                 Talk to sales
-              </a>
+              </Link>
             </div>
           </div>
         </div>

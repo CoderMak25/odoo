@@ -1,0 +1,31 @@
+import { X } from 'lucide-react';
+
+export default function Modal({ isOpen, onClose, title, children, size = 'md' }) {
+  if (!isOpen) return null;
+
+  const sizes = {
+    sm: 'max-w-md',
+    md: 'max-w-2xl',
+    lg: 'max-w-4xl',
+    xl: 'max-w-6xl',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
+      <div className={`relative w-full ${sizes[size]} rounded-2xl border border-white/10 bg-slate-900 shadow-xl`}>
+        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <h2 className="text-lg font-semibold text-slate-50">{title}</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+

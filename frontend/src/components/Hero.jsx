@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ShieldCheck, Bolt, PlayCircle, Timer, ScanLine, Building2 } from 'lucide-react';
 import DashboardPreview from './DashboardPreview';
 
@@ -17,14 +18,14 @@ export default function Hero() {
             StockMaster centralizes products, receipts, deliveries, transfers, and adjustments—so teams move faster with accurate, live stock levels across every warehouse.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#" className="inline-flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-400 transition-colors">
+            <Link to="/login" className="inline-flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-400 transition-colors">
               <Bolt className="h-4 w-4" />
               Start free
-            </a>
-            <a href="#" className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/10 transition-colors">
+            </Link>
+            <Link to="/login" className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 hover:bg-white/10 transition-colors">
               <PlayCircle className="h-4 w-4" />
               Book a demo
-            </a>
+            </Link>
           </div>
           <div className="mt-6 flex items-center justify-center gap-6 text-xs text-slate-400">
             <div className="flex items-center gap-2">
