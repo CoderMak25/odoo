@@ -1,43 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import * as api from '../utils/api';
 
 const AppContext = createContext();
 
 const STORAGE_KEYS = {
-  PRODUCTS: 'stockmaster_products',
-  RECEIPTS: 'stockmaster_receipts',
-  DELIVERIES: 'stockmaster_deliveries',
   USER: 'stockmaster_user',
 };
-
-// Mock initial data
-const initialProducts = [
-  { id: 1, name: 'Steel Rods', sku: 'STL-001', category: 'Raw Materials', uom: 'kg', stock: 1250, reorderLevel: 200, status: 'in_stock' },
-  { id: 2, name: 'Office Chairs', sku: 'FUR-001', category: 'Furniture', uom: 'pcs', stock: 45, reorderLevel: 20, status: 'in_stock' },
-  { id: 3, name: 'Laptop Computers', sku: 'ELC-001', category: 'Electronics', uom: 'pcs', stock: 12, reorderLevel: 15, status: 'low_stock' },
-  { id: 4, name: 'Wooden Planks', sku: 'RAW-001', category: 'Raw Materials', uom: 'meters', stock: 320, reorderLevel: 100, status: 'in_stock' },
-  { id: 5, name: 'Paint (Blue)', sku: 'CHM-001', category: 'Chemicals', uom: 'liters', stock: 8, reorderLevel: 20, status: 'low_stock' },
-  { id: 6, name: 'Screws (M6)', sku: 'HRD-001', category: 'Hardware', uom: 'pcs', stock: 0, reorderLevel: 500, status: 'out_of_stock' },
-  { id: 7, name: 'LED Bulbs', sku: 'ELC-002', category: 'Electronics', uom: 'pcs', stock: 150, reorderLevel: 50, status: 'in_stock' },
-  { id: 8, name: 'Desk Tables', sku: 'FUR-002', category: 'Furniture', uom: 'pcs', stock: 25, reorderLevel: 10, status: 'in_stock' },
-  { id: 9, name: 'Motor Oil', sku: 'CHM-002', category: 'Chemicals', uom: 'liters', stock: 5, reorderLevel: 30, status: 'low_stock' },
-  { id: 10, name: 'Nails (3 inch)', sku: 'HRD-002', category: 'Hardware', uom: 'pcs', stock: 850, reorderLevel: 200, status: 'in_stock' },
-];
-
-const initialReceipts = [
-  { id: 1, receiptId: 'RCP-001', supplier: 'Steel Corp Ltd', date: '2025-01-15', status: 'done', items: [{ productId: 1, quantity: 50 }], totalItems: 50 },
-  { id: 2, receiptId: 'RCP-002', supplier: 'Furniture World', date: '2025-01-16', status: 'ready', items: [{ productId: 2, quantity: 20 }], totalItems: 20 },
-  { id: 3, receiptId: 'RCP-003', supplier: 'Tech Supplies Inc', date: '2025-01-17', status: 'waiting', items: [{ productId: 3, quantity: 10 }], totalItems: 10 },
-  { id: 4, receiptId: 'RCP-004', supplier: 'Raw Materials Co', date: '2025-01-18', status: 'draft', items: [{ productId: 4, quantity: 100 }], totalItems: 100 },
-  { id: 5, receiptId: 'RCP-005', supplier: 'Chemical Solutions', date: '2025-01-19', status: 'canceled', items: [{ productId: 5, quantity: 15 }], totalItems: 15 },
-];
-
-const initialDeliveries = [
-  { id: 1, deliveryId: 'DEL-001', customer: 'ABC Manufacturing', date: '2025-01-15', status: 'done', items: [{ productId: 1, quantity: 20 }], totalItems: 20 },
-  { id: 2, deliveryId: 'DEL-002', customer: 'XYZ Retail', date: '2025-01-16', status: 'ready', items: [{ productId: 2, quantity: 10 }], totalItems: 10 },
-  { id: 3, deliveryId: 'DEL-003', customer: 'Tech Store', date: '2025-01-17', status: 'waiting', items: [{ productId: 3, quantity: 5 }], totalItems: 5 },
-  { id: 4, deliveryId: 'DEL-004', customer: 'Construction Co', date: '2025-01-18', status: 'draft', items: [{ productId: 4, quantity: 50 }], totalItems: 50 },
-  { id: 5, deliveryId: 'DEL-005', customer: 'Home Depot', date: '2025-01-19', status: 'done', items: [{ productId: 7, quantity: 30 }], totalItems: 30 },
-];
 
 function loadFromStorage(key, defaultValue) {
   try {
@@ -57,157 +25,228 @@ function saveToStorage(key, value) {
 }
 
 export function AppProvider({ children }) {
-  const [products, setProducts] = useState(() => loadFromStorage(STORAGE_KEYS.PRODUCTS, initialProducts));
-  const [receipts, setReceipts] = useState(() => loadFromStorage(STORAGE_KEYS.RECEIPTS, initialReceipts));
-  const [deliveries, setDeliveries] = useState(() => loadFromStorage(STORAGE_KEYS.DELIVERIES, initialDeliveries));
+  const [products, setProducts] = useState([]);
+  const [receipts, setReceipts] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [user, setUser] = useState(() => loadFromStorage(STORAGE_KEYS.USER, null));
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sync to localStorage whenever state changes
+  // Fetch data from API on mount
   useEffect(() => {
-    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
-  }, [products]);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [productsData, receiptsData, deliveriesData] = await Promise.all([
+          api.fetchProducts().catch(() => []),
+          api.fetchReceipts().catch(() => []),
+          api.fetchDeliveries().catch(() => []),
+        ]);
+        
+        setProducts(productsData);
+        setReceipts(receiptsData);
+        setDeliveries(deliveriesData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        showToast('Failed to load data from server', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, []);
 
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.RECEIPTS, receipts);
-  }, [receipts]);
-
-  useEffect(() => {
-    saveToStorage(STORAGE_KEYS.DELIVERIES, deliveries);
-  }, [deliveries]);
-
+  // Sync user to localStorage
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.USER, user);
   }, [user]);
 
+  // Helper function to determine product status
+  function getProductStatus(stock, reorderLevel) {
+    if (stock === 0) return 'out_of_stock';
+    if (stock <= reorderLevel) return 'low_stock';
+    return 'in_stock';
+  }
+
   // Product operations
-  const addProduct = (product) => {
-    const newProduct = {
-      ...product,
-      id: Date.now(),
-      stock: product.initialStock || 0,
-      status: getProductStatus(product.initialStock || 0, product.reorderLevel || 0),
-    };
-    setProducts([...products, newProduct]);
-    showToast('Product added successfully', 'success');
+  const addProduct = async (product) => {
+    try {
+      const newProduct = await api.createProduct({
+        name: product.name,
+        sku: product.sku,
+        category: product.category,
+        uom: product.uom,
+        initialStock: product.initialStock || 0,
+        reorderLevel: product.reorderLevel || 0,
+      });
+      setProducts([...products, newProduct]);
+      showToast('Product added successfully', 'success');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      showToast(error.message || 'Failed to add product', 'error');
+    }
   };
 
-  const updateProduct = (id, updates) => {
-    setProducts(products.map(p => {
-      if (p.id === id) {
-        const updated = { ...p, ...updates };
-        updated.status = getProductStatus(updated.stock, updated.reorderLevel);
-        return updated;
-      }
-      return p;
-    }));
-    showToast('Product updated successfully', 'success');
+  const updateProduct = async (id, updates) => {
+    try {
+      const updated = await api.updateProduct(id, {
+        name: updates.name,
+        sku: updates.sku,
+        category: updates.category,
+        uom: updates.uom,
+        stock: updates.stock !== undefined ? updates.stock : updates.initialStock,
+        reorderLevel: updates.reorderLevel,
+      });
+      setProducts(products.map(p => p.id === id ? updated : p));
+      showToast('Product updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      showToast(error.message || 'Failed to update product', 'error');
+    }
   };
 
-  const deleteProduct = (id) => {
-    setProducts(products.filter(p => p.id !== id));
-    showToast('Product deleted successfully', 'success');
+  const deleteProduct = async (id) => {
+    try {
+      await api.deleteProduct(id);
+      setProducts(products.filter(p => p.id !== id));
+      showToast('Product deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      showToast(error.message || 'Failed to delete product', 'error');
+    }
   };
 
   // Receipt operations
-  const addReceipt = (receipt) => {
-    const receiptNumber = receipts.length + 1;
-    const newReceipt = {
-      ...receipt,
-      id: Date.now(),
-      receiptId: `RCP-${String(receiptNumber).padStart(3, '0')}`,
-      totalItems: receipt.items.reduce((sum, item) => sum + item.quantity, 0),
-    };
-    setReceipts([...receipts, newReceipt]);
-    
-    // Update product stock if receipt is validated
-    if (receipt.status === 'done') {
-      receipt.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          updateProduct(product.id, { stock: product.stock + item.quantity });
-        }
+  const addReceipt = async (receipt) => {
+    try {
+      const newReceipt = await api.createReceipt({
+        supplier: receipt.supplier,
+        date: receipt.date,
+        status: receipt.status || 'draft',
+        items: receipt.items,
       });
-    }
-    
-    showToast('Receipt created successfully', 'success');
-  };
-
-  const updateReceipt = (id, updates) => {
-    setReceipts(receipts.map(r => {
-      if (r.id === id) {
-        const updated = { ...r, ...updates };
-        updated.totalItems = updated.items.reduce((sum, item) => sum + item.quantity, 0);
-        return updated;
+      setReceipts([...receipts, newReceipt]);
+      
+      // Update product stock if receipt is validated
+      if (receipt.status === 'done') {
+        await refreshProducts();
       }
-      return r;
-    }));
-    showToast('Receipt updated successfully', 'success');
-  };
-
-  const validateReceipt = (id) => {
-    const receipt = receipts.find(r => r.id === id);
-    if (receipt && receipt.status !== 'done') {
-      receipt.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          updateProduct(product.id, { stock: product.stock + item.quantity });
-        }
-      });
-      updateReceipt(id, { status: 'done' });
-      showToast('Receipt validated successfully', 'success');
+      
+      showToast('Receipt created successfully', 'success');
+    } catch (error) {
+      console.error('Error adding receipt:', error);
+      showToast(error.message || 'Failed to create receipt', 'error');
     }
   };
 
-  const deleteReceipt = (id) => {
-    setReceipts(receipts.filter(r => r.id !== id));
-    showToast('Receipt deleted successfully', 'success');
+  const updateReceipt = async (id, updates) => {
+    try {
+      const updated = await api.updateReceipt(id, {
+        supplier: updates.supplier,
+        date: updates.date,
+        status: updates.status,
+        items: updates.items,
+      });
+      setReceipts(receipts.map(r => r.id === id ? updated : r));
+      showToast('Receipt updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating receipt:', error);
+      showToast(error.message || 'Failed to update receipt', 'error');
+    }
+  };
+
+  const validateReceipt = async (id) => {
+    try {
+      await api.validateReceipt(id);
+      // Refresh receipts and products to get updated data
+      const [updatedReceipts, updatedProducts] = await Promise.all([
+        api.fetchReceipts(),
+        api.fetchProducts(),
+      ]);
+      setReceipts(updatedReceipts);
+      setProducts(updatedProducts);
+      showToast('Receipt validated successfully', 'success');
+    } catch (error) {
+      console.error('Error validating receipt:', error);
+      showToast(error.message || 'Failed to validate receipt', 'error');
+    }
+  };
+
+  const deleteReceipt = async (id) => {
+    try {
+      await api.deleteReceipt(id);
+      setReceipts(receipts.filter(r => r.id !== id));
+      showToast('Receipt deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting receipt:', error);
+      showToast(error.message || 'Failed to delete receipt', 'error');
+    }
   };
 
   // Delivery operations
-  const addDelivery = (delivery) => {
-    const deliveryNumber = deliveries.length + 1;
-    const newDelivery = {
-      ...delivery,
-      id: Date.now(),
-      deliveryId: `DEL-${String(deliveryNumber).padStart(3, '0')}`,
-      totalItems: delivery.items.reduce((sum, item) => sum + item.quantity, 0),
-    };
-    setDeliveries([...deliveries, newDelivery]);
-    
-    // Update product stock if delivery is done
-    if (delivery.status === 'done') {
-      delivery.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          updateProduct(product.id, { stock: Math.max(0, product.stock - item.quantity) });
-        }
+  const addDelivery = async (delivery) => {
+    try {
+      const newDelivery = await api.createDelivery({
+        customer: delivery.customer,
+        date: delivery.date,
+        status: delivery.status || 'draft',
+        items: delivery.items,
       });
-    }
-    
-    showToast('Delivery order created successfully', 'success');
-  };
-
-  const updateDelivery = (id, updates) => {
-    setDeliveries(deliveries.map(d => {
-      if (d.id === id) {
-        const updated = { ...d, ...updates };
-        updated.totalItems = updated.items.reduce((sum, item) => sum + item.quantity, 0);
-        return updated;
+      setDeliveries([...deliveries, newDelivery]);
+      
+      // Update product stock if delivery is done
+      if (delivery.status === 'done') {
+        await refreshProducts();
       }
-      return d;
-    }));
-    showToast('Delivery updated successfully', 'success');
+      
+      showToast('Delivery order created successfully', 'success');
+    } catch (error) {
+      console.error('Error adding delivery:', error);
+      showToast(error.message || 'Failed to create delivery', 'error');
+    }
   };
 
-  const deleteDelivery = (id) => {
-    setDeliveries(deliveries.filter(d => d.id !== id));
-    showToast('Delivery deleted successfully', 'success');
+  const updateDelivery = async (id, updates) => {
+    try {
+      const updated = await api.updateDelivery(id, {
+        customer: updates.customer,
+        date: updates.date,
+        status: updates.status,
+        items: updates.items,
+      });
+      setDeliveries(deliveries.map(d => d.id === id ? updated : d));
+      showToast('Delivery updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating delivery:', error);
+      showToast(error.message || 'Failed to update delivery', 'error');
+    }
+  };
+
+  const deleteDelivery = async (id) => {
+    try {
+      await api.deleteDelivery(id);
+      setDeliveries(deliveries.filter(d => d.id !== id));
+      showToast('Delivery deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting delivery:', error);
+      showToast(error.message || 'Failed to delete delivery', 'error');
+    }
+  };
+
+  // Helper to refresh products
+  const refreshProducts = async () => {
+    try {
+      const updatedProducts = await api.fetchProducts();
+      setProducts(updatedProducts);
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+    }
   };
 
   // Auth operations
   const login = (email, password) => {
-    // Mock authentication
+    // Mock authentication - TODO: implement real auth
     const mockUser = { email, name: 'Admin User' };
     setUser(mockUser);
     showToast('Login successful', 'success');
@@ -227,13 +266,6 @@ export function AppProvider({ children }) {
   const closeToast = () => {
     setToast(null);
   };
-
-  // Helper function to determine product status
-  function getProductStatus(stock, reorderLevel) {
-    if (stock === 0) return 'out_of_stock';
-    if (stock <= reorderLevel) return 'low_stock';
-    return 'in_stock';
-  }
 
   // Calculate dashboard KPIs
   const getDashboardKPIs = () => {
@@ -258,6 +290,7 @@ export function AppProvider({ children }) {
     deliveries,
     user,
     toast,
+    loading,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -285,4 +318,3 @@ export function useApp() {
   }
   return context;
 }
-
